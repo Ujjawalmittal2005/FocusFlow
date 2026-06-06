@@ -1,0 +1,123 @@
+import { useState, useEffect, useCallback } from 'react';
+import Navbar from '../components/Navbar';
+import PomodoroTimer from '../components/PomodoroTimer';
+import Notes from '../components/Notes';
+import api from '../api/api';
+
+const DashboardPage = () => {
+  const [tasks, setTasks] = useState([]);
+  const [selectedTask, setSelectedTask] = useState(null);
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      const data = await api.tasks.getAll('pending');
+      setTasks(data.tasks);
+      if (selectedTask) {
+        const updated = data.tasks.find((t) => t._id === selectedTask._id);
+        if (updated) {
+          setSelectedTask(updated);
+        } else {
+          setSelectedTask(null);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch tasks:', err);
+    }
+  }, [selectedTask]);
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const formatTime = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
+
+  const youtubeVideoUrl = 'https://www.youtube.com/embed/lTRiuFIWV54?si=A9lZIDXOT3AvtnNO';
+
+  return (
+    <div className="app-shell flex flex-col">
+      <Navbar />
+      <main className="flex-1 p-5 max-w-[1400px] w-full mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch animate-fade-up">
+          {/* Pending Tasks */}
+          <div className="glass-panel rounded-2xl overflow-hidden max-h-[calc(100vh-100px)] overflow-y-auto transition-all duration-300">
+            <div className="flex items-center justify-between px-5 py-4 border-b surface-divider">
+              <h2 className="flex items-center gap-2 text-[15px] font-semibold theme-text-primary">
+                <span>☰</span> Pending Tasks
+              </h2>
+              <span className="status-pill text-xs font-semibold px-2 py-1 rounded-full">
+                {tasks.length}
+              </span>
+            </div>
+
+            <div className="px-5 py-3">
+              <div className="flex flex-col gap-2">
+                {tasks.length === 0 && (
+                  <p className="text-center text-xs theme-text-soft py-6">No pending tasks. Create one!</p>
+                )}
+                {tasks.map((task) => (
+                  <div
+                    key={task._id}
+                    className={`p-3 rounded-xl border transition-all duration-150 cursor-pointer ${
+                      selectedTask?._id === task._id
+                        ? 'bg-white/14 border-white/20 shadow-md backdrop-blur-md'
+                        : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10 backdrop-blur-sm'
+                    }`}
+                    onClick={() => setSelectedTask(selectedTask?._id === task._id ? null : task)}
+                    id={`task-${task._id}`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h4 className="text-sm font-semibold truncate flex-1 min-w-0 theme-text-primary">{task.title}</h4>
+                      <div className="flex gap-2 shrink-0 text-xs theme-text-secondary">
+                        <span>⟳ {task.cycles_completed}/{task.cycles_required}</span>
+                        <span>⏱ {formatTime(task.time_elapsed)}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs theme-text-soft line-clamp-1">{task.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Pomodoro Timer */}
+          <PomodoroTimer
+            selectedTask={selectedTask}
+            onTaskRemove={() => setSelectedTask(null)}
+            onRefresh={fetchTasks}
+          />
+
+          {/* Notes */}
+          <Notes />
+        
+
+          <div className="glass-panel rounded-2xl overflow-hidden mt-5 transition-all duration-300">
+            <div className="flex items-center justify-between px-5 py-4 border-b surface-divider">
+              <h2 className="flex items-center gap-2 text-[15px] font-semibold theme-text-primary">
+                <span>▶</span> Study Video
+              </h2>
+            </div>
+            <div className="p-5">
+              <div className="relative aspect-video overflow-hidden rounded-3xl border border-white/10 bg-black">
+                <iframe
+                  title="YouTube Study Video"
+                  src={youtubeVideoUrl}
+                  className="absolute inset-0 w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default DashboardPage;
